@@ -33,7 +33,7 @@ class OcrController extends Controller
         $file = $request->file('path');
 
         Storage::disk('local')->put('image.png', $file);
-        
+
         try {
             $ocr = new TesseractOCR();
             $ocr->image($request->path);
@@ -52,7 +52,43 @@ class OcrController extends Controller
      */
     public function show($id)
     {
-        //
+        $ocr = new TesseractOCR();
+        $ocr->image("C:\laragon\www\ocr-backend\app\Http\Controllers\Api\Untitled.png");
+        $scanned = ($ocr->run());
+        print($scanned);
+
+        $con_num = "";
+        $regex_letter = "/[A-Z]{4}/";
+        $regex_number = "/([0-9]{6})/";
+        $regex_iso = "/([0-9]{2}[A-Z][0-9]/";
+
+        if (preg_match($regex_letter, $scanned, $match)) {
+            foreach ($match as $key => $value) {
+                $letters = $value;
+            }
+            Storage::disk('local')->put('letter.txt', $letters);
+            echo "\nletter match";
+            $con_num = $letters;
+        }
+
+        if (preg_match($regex_number, $scanned, $match)) {
+            foreach ($match as $key => $value) {
+                $number = $value;
+            }
+            Storage::disk('local')->put('number.txt', $number);
+            echo "\nnumber match\n";
+            $con_num .= $number;
+        }
+
+        if (preg_match($regex_iso, $scanned, $match)) {
+            foreach ($match as $key => $value) {
+                $iso = $value;
+            }
+            Storage::disk('local')->put('iso.txt', $iso);
+            echo "\niso match\n";
+            $con_num .= $iso;
+        }
+        return $con_num;
     }
 
     /**
