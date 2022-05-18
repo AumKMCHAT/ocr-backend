@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ocr;
 use Illuminate\Http\Request;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 use Illuminate\Support\Facades\Storage;
@@ -36,6 +37,9 @@ class OcrController extends Controller
         // Storage::disk('local')->put('image.png', $file);
 
         $con_num = "";
+        $iso = "";
+        $check = 0;
+        $ans = array();
         $regex_letter = "/[A-Z]{4}/";
         $regex_number = "/([0-9]{6})/";
         $regex_iso = "/([0-9]{2}[A-Z][0-9])/";
@@ -50,8 +54,9 @@ class OcrController extends Controller
                     $letters = $value;
                 }
                 Storage::disk('local')->put('letter.txt', $letters);
-                echo "\nletter match";
+
                 $con_num = $letters;
+                $check++;
             }
 
             if (preg_match($regex_number, $scanned, $match)) {
@@ -59,8 +64,9 @@ class OcrController extends Controller
                     $number = $value;
                 }
                 Storage::disk('local')->put('number.txt', $number);
-                echo "\nnumber match\n";
+
                 $con_num .= $number;
+                $check++;
             }
 
             if (preg_match($regex_iso, $scanned, $match)) {
@@ -68,10 +74,17 @@ class OcrController extends Controller
                     $iso = $value;
                 }
                 Storage::disk('local')->put('iso.txt', $iso);
-                echo "\niso match\n";
-                $con_num .= $iso;
+ 
+                $iso = $iso;
             }
-            return "Store page";
+
+            if($check == 2) {
+                array_push($ans, $con_num);
+                array_push($ans, $iso);
+            }
+
+
+            return $ans;
         } catch (\Exception $e) {
             return $e->getMessage();
         }
