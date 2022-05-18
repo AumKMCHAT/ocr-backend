@@ -30,14 +30,47 @@ class OcrController extends Controller
      */
     public function store(Request $request)
     {
-        $file = $request->file('path');
 
-        Storage::disk('local')->put('image.png', $file);
+        $file = $request->file('image');
+
+        // Storage::disk('local')->put('image.png', $file);
+
+        $con_num = "";
+        $regex_letter = "/[A-Z]{4}/";
+        $regex_number = "/([0-9]{6})/";
+        $regex_iso = "/([0-9]{2}[A-Z][0-9])/";
 
         try {
             $ocr = new TesseractOCR();
-            $ocr->image($request->path);
+            $ocr->image($file);
             $scanned = ($ocr->run());
+            print($scanned);
+            if (preg_match($regex_letter, $scanned, $match)) {
+                foreach ($match as $key => $value) {
+                    $letters = $value;
+                }
+                Storage::disk('local')->put('letter.txt', $letters);
+                echo "\nletter match";
+                $con_num = $letters;
+            }
+
+            if (preg_match($regex_number, $scanned, $match)) {
+                foreach ($match as $key => $value) {
+                    $number = $value;
+                }
+                Storage::disk('local')->put('number.txt', $number);
+                echo "\nnumber match\n";
+                $con_num .= $number;
+            }
+
+            if (preg_match($regex_iso, $scanned, $match)) {
+                foreach ($match as $key => $value) {
+                    $iso = $value;
+                }
+                Storage::disk('local')->put('iso.txt', $iso);
+                echo "\niso match\n";
+                $con_num .= $iso;
+            }
             return "Store page";
         } catch (\Exception $e) {
             return $e->getMessage();
@@ -52,15 +85,19 @@ class OcrController extends Controller
      */
     public function show($id)
     {
+        $content = "";
+        Storage::put('image.png', $content);
+
+        print($content);
         $ocr = new TesseractOCR();
-        $ocr->image("C:\laragon\www\ocr-backend\app\Http\Controllers\Api\Untitled.png");
+        $ocr->image("C:\laragon\www\ocr-backend\storage\app\image.png\V9FJkNSvJZfBndw8sIeBqRLwxFsvviVJ4RUbWOFs.png");
         $scanned = ($ocr->run());
         print($scanned);
 
         $con_num = "";
         $regex_letter = "/[A-Z]{4}/";
         $regex_number = "/([0-9]{6})/";
-        $regex_iso = "/([0-9]{2}[A-Z][0-9]/";
+        $regex_iso = "/([0-9]{2}[A-Z][0-9])/";
 
         if (preg_match($regex_letter, $scanned, $match)) {
             foreach ($match as $key => $value) {
