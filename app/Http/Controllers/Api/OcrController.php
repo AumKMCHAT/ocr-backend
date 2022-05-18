@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use thiagoalessio\TesseractOCR\TesseractOCR;
+use Illuminate\Support\Facades\Storage;
 
 class OcrController extends Controller
 {
@@ -13,11 +14,11 @@ class OcrController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index($img)
+    public function index()
     {
-        $ocr = new TesseractOCR();
-        $ocr->image($img);
-        echo ($ocr->run());
+        // $ocr = new TesseractOCR();
+        // $ocr->image('C:\laragon\www\ocr-backend\app\Http\Controllers\Api\download.png');
+        // echo ($ocr->run());
         return "This is home page.";
     }
 
@@ -29,7 +30,18 @@ class OcrController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $file = $request->file('path');
+
+        Storage::disk('local')->put('image.png', $file);
+        
+        try {
+            $ocr = new TesseractOCR();
+            $ocr->image($request->path);
+            $scanned = ($ocr->run());
+            return "Store page";
+        } catch (\Exception $e) {
+            return $e->getMessage();
+        }
     }
 
     /**

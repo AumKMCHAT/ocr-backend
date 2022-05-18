@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('containers', function (Blueprint $table) {
-            $table->id();
+            $table->id('id');
             $table->timestamps('created_at');
             $table->string('path', 2000);
         });
