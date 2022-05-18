@@ -17,9 +17,6 @@ class OcrController extends Controller
      */
     public function index()
     {
-        // $ocr = new TesseractOCR();
-        // $ocr->image('C:\laragon\www\ocr-backend\app\Http\Controllers\Api\download.png');
-        // echo ($ocr->run());
         return "This is home page.";
     }
 
@@ -38,8 +35,6 @@ class OcrController extends Controller
 
         $con_num = "";
         $iso = "";
-        $check = 0;
-        $ans = array();
         $regex_letter = "/[A-Z]{4}/";
         $regex_number = "/([0-9]{6})/";
         $regex_iso = "/([0-9]{2}[A-Z][0-9])/";
@@ -56,7 +51,6 @@ class OcrController extends Controller
                 Storage::disk('local')->put('letter.txt', $letters);
 
                 $con_num = $letters;
-                $check++;
             }
 
             if (preg_match($regex_number, $scanned, $match)) {
@@ -66,7 +60,6 @@ class OcrController extends Controller
                 Storage::disk('local')->put('number.txt', $number);
 
                 $con_num .= $number;
-                $check++;
             }
 
             if (preg_match($regex_iso, $scanned, $match)) {
@@ -78,13 +71,6 @@ class OcrController extends Controller
                 $iso = $iso;
             }
 
-            if($check == 2) {
-                array_push($ans, $con_num);
-                array_push($ans, $iso);
-            }
-
-
-            return $ans;
         } catch (\Exception $e) {
             return $e->getMessage();
         }
@@ -98,47 +84,18 @@ class OcrController extends Controller
      */
     public function show($id)
     {
-        $content = "";
-        Storage::put('image.png', $content);
+        
+        $letters = Storage::get('letter.txt');
+        $number = Storage::get('number.txt');
+        $iso = Storage::get('iso.txt');
 
-        print($content);
-        $ocr = new TesseractOCR();
-        $ocr->image("C:\laragon\www\ocr-backend\storage\app\image.png\V9FJkNSvJZfBndw8sIeBqRLwxFsvviVJ4RUbWOFs.png");
-        $scanned = ($ocr->run());
-        print($scanned);
+        $ans = array();
 
-        $con_num = "";
-        $regex_letter = "/[A-Z]{4}/";
-        $regex_number = "/([0-9]{6})/";
-        $regex_iso = "/([0-9]{2}[A-Z][0-9])/";
+        array_push($ans, $letters);
+        array_push($ans, $number);
+        array_push($ans, $iso);
 
-        if (preg_match($regex_letter, $scanned, $match)) {
-            foreach ($match as $key => $value) {
-                $letters = $value;
-            }
-            Storage::disk('local')->put('letter.txt', $letters);
-            echo "\nletter match";
-            $con_num = $letters;
-        }
-
-        if (preg_match($regex_number, $scanned, $match)) {
-            foreach ($match as $key => $value) {
-                $number = $value;
-            }
-            Storage::disk('local')->put('number.txt', $number);
-            echo "\nnumber match\n";
-            $con_num .= $number;
-        }
-
-        if (preg_match($regex_iso, $scanned, $match)) {
-            foreach ($match as $key => $value) {
-                $iso = $value;
-            }
-            Storage::disk('local')->put('iso.txt', $iso);
-            echo "\niso match\n";
-            $con_num .= $iso;
-        }
-        return $con_num;
+        return $ans;
     }
 
     /**
