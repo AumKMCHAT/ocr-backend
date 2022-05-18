@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 use Illuminate\Support\Facades\Storage;
 
+use function PHPUnit\Framework\isType;
+
 class OcrController extends Controller
 {
     /**
@@ -33,8 +35,6 @@ class OcrController extends Controller
 
         // Storage::disk('local')->put('image.png', $file);
 
-        $con_num = "";
-        $iso = "";
         $regex_letter = "/[A-Z]{4}/";
         $regex_number = "/([0-9]{6})/";
         $regex_iso = "/([0-9]{2}[A-Z][0-9])/";
@@ -48,18 +48,15 @@ class OcrController extends Controller
                 foreach ($match as $key => $value) {
                     $letters = $value;
                 }
-                Storage::disk('local')->put('letter.txt', $letters);
 
-                $con_num = $letters;
-            }
+                if (preg_match($regex_number, $scanned, $match)) {
+                    foreach ($match as $key => $value) {
+                        $number = $value;
+                    }
 
-            if (preg_match($regex_number, $scanned, $match)) {
-                foreach ($match as $key => $value) {
-                    $number = $value;
+                    Storage::disk('local')->put('letter.txt', $letters);
+                    Storage::disk('local')->put('number.txt', $number);
                 }
-                Storage::disk('local')->put('number.txt', $number);
-
-                $con_num .= $number;
             }
 
             if (preg_match($regex_iso, $scanned, $match)) {
@@ -67,10 +64,7 @@ class OcrController extends Controller
                     $iso = $value;
                 }
                 Storage::disk('local')->put('iso.txt', $iso);
- 
-                $iso = $iso;
             }
-
         } catch (\Exception $e) {
             return $e->getMessage();
         }
@@ -84,7 +78,7 @@ class OcrController extends Controller
      */
     public function show($id)
     {
-        
+
         $letters = Storage::get('letter.txt');
         $number = Storage::get('number.txt');
         $iso = Storage::get('iso.txt');
