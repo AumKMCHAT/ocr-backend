@@ -40,7 +40,8 @@ class OcrController extends Controller
         $file = $request->file('image');
 
         $regex_iso = "/[0-9]{2}[A-Z][0-9]/";
-        $check = 0;
+        $check_con = 0;
+        $check_iso = 0;
         $regex_con_num = "/[A-Z]{4}[0-9]{6}/";
         $con_num = "";
 
@@ -48,7 +49,7 @@ class OcrController extends Controller
             $ocr = new TesseractOCR();
             $ocr->image($file);
             $scanned = ($ocr->run());
-            for ($i=0; $i<strlen($scanned); $i++) {
+            for ($i = 0; $i < strlen($scanned); $i++) {
                 $con_num .= $scanned[$i];
                 $new_con_num = str_replace(' ', '', $con_num);
 
@@ -57,6 +58,7 @@ class OcrController extends Controller
                     Storage::disk('local')->put('containerNumber.txt', $new_con_num);
 
                     print("\nContainer Number Match");
+                    $check_con++;
                     break;
                 }
             }
@@ -67,17 +69,17 @@ class OcrController extends Controller
                 }
 
                 Storage::disk('local')->put('iso.txt', $iso);
-                $check++;
+                $check_iso++;
                 $iso = Storage::get('iso.txt');
                 print("\nISO Match\n" . $iso);
             }
 
-            if($check == 2) {
-                print("\nFound Container number & ISO");
-            } else {
-                print("\nNot found something or both");
+            if ($check_con != 1) {
+                print("\nNot Found Container number");
             }
-
+            if ($check_iso != 1) {
+                print("\nNot Found ISO");
+            }
         } catch (\Exception $e) {
             print("Tesseract KAK!");
             return $e->getMessage();
