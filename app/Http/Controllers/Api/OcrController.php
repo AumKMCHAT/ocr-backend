@@ -8,8 +8,6 @@ use Illuminate\Http\Request;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 use Illuminate\Support\Facades\Storage;
 
-use function PHPUnit\Framework\isType;
-
 class OcrController extends Controller
 {
     /**
@@ -19,7 +17,15 @@ class OcrController extends Controller
      */
     public function index()
     {
-        return "This is home page.";
+        $con_num = Storage::get('containerNumber.txt');
+        $iso = Storage::get('iso.txt');
+
+        $ans = array();
+
+        array_push($ans, $con_num);
+        array_push($ans, $iso);
+
+        return $ans;
     }
 
     /**
@@ -33,29 +39,25 @@ class OcrController extends Controller
 
         $file = $request->file('image');
 
-        // Storage::disk('local')->put('image.png', $file);
-
-        $regex_letter = "/[A-Z]{4}/";
-        $regex_number = "/([0-9]{6})/";
-        $regex_iso = "/([0-9]{2}[A-Z][0-9])/";
+        $regex_iso = "/[0-9]{2}[A-Z][0-9]/";
+        $check = 0;
+        $regex_con_num = "/[A-Z]{4}[0-9]{6}/";
+        $con_num = "";
 
         try {
             $ocr = new TesseractOCR();
             $ocr->image($file);
             $scanned = ($ocr->run());
-            print($scanned);
-            if (preg_match($regex_letter, $scanned, $match)) {
-                foreach ($match as $key => $value) {
-                    $letters = $value;
-                }
+            for ($i=0; $i<strlen($scanned); $i++) {
+                $con_num .= $scanned[$i];
+                $new_con_num = str_replace(' ', '', $con_num);
 
-                if (preg_match($regex_number, $scanned, $match)) {
-                    foreach ($match as $key => $value) {
-                        $number = $value;
-                    }
+                if (preg_match($regex_con_num, $new_con_num)) {
 
-                    Storage::disk('local')->put('letter.txt', $letters);
-                    Storage::disk('local')->put('number.txt', $number);
+                    Storage::disk('local')->put('containerNumber.txt', $new_con_num);
+
+                    print("\nContainer Number Match");
+                    break;
                 }
             }
 
@@ -63,9 +65,21 @@ class OcrController extends Controller
                 foreach ($match as $key => $value) {
                     $iso = $value;
                 }
+
                 Storage::disk('local')->put('iso.txt', $iso);
+                $check++;
+                $iso = Storage::get('iso.txt');
+                print("\nISO Match\n" . $iso);
             }
+
+            if($check == 2) {
+                print("\nFound Container number & ISO");
+            } else {
+                print("\nNot found something or both");
+            }
+
         } catch (\Exception $e) {
+            print("Tesseract KAK!");
             return $e->getMessage();
         }
     }
@@ -78,18 +92,7 @@ class OcrController extends Controller
      */
     public function show($id)
     {
-
-        $letters = Storage::get('letter.txt');
-        $number = Storage::get('number.txt');
-        $iso = Storage::get('iso.txt');
-
-        $ans = array();
-
-        array_push($ans, $letters);
-        array_push($ans, $number);
-        array_push($ans, $iso);
-
-        return $ans;
+        //
     }
 
     /**
