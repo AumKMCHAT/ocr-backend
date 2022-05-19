@@ -53,11 +53,12 @@ class OcrController extends Controller
                 $con_num .= $scanned[$i];
                 $new_con_num = str_replace(' ', '', $con_num);
 
-                if (preg_match($regex_con_num, $new_con_num)) {
-
+                if (preg_match($regex_con_num, $new_con_num, $match)) {
+                    foreach ($match as $key => $value) {
+                        $new_con_num = $value;
+                    }
                     Storage::disk('local')->put('containerNumber.txt', $new_con_num);
 
-                    print("\nContainer Number Match");
                     $check_con++;
                     break;
                 }
@@ -71,19 +72,15 @@ class OcrController extends Controller
                 Storage::disk('local')->put('iso.txt', $iso);
                 $check_iso++;
                 $iso = Storage::get('iso.txt');
-                print("\nISO Match\n" . $iso);
             }
 
             if ($check_con != 1) {
                 Storage::disk('local')->put('containerNumber.txt', "Not Found");
-                print("\nNot Found Container number");
             }
             if ($check_iso != 1) {
                 Storage::disk('local')->put('iso.txt', "Not Found");
-                print("\nNot Found ISO");
             }
         } catch (\Exception $e) {
-            print("Tesseract KAK!");
             return $e->getMessage();
         }
     }
