@@ -75,9 +75,11 @@ class OcrController extends Controller
             }
 
             if ($check_con != 1) {
+                Storage::disk('local')->put('containerNumber.txt', "Not Found");
                 print("\nNot Found Container number");
             }
             if ($check_iso != 1) {
+                Storage::disk('local')->put('iso.txt', "Not Found");
                 print("\nNot Found ISO");
             }
         } catch (\Exception $e) {
