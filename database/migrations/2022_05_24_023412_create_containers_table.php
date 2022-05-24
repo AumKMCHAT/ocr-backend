@@ -15,8 +15,10 @@ return new class extends Migration
     {
         Schema::create('containers', function (Blueprint $table) {
             $table->id('id');
-            $table->timestamps('created_at');
-            $table->string('path', 2000);
+            $table->string('path');
+            $table->string('container_number');
+            $table->string('iso');
+            $table->timestamps();
         });
     }
 
