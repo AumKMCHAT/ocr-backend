@@ -102,10 +102,8 @@ class OcrController extends Controller
                     }
                 }
             }
-
-            return response()->json($suggester_iso);
-
             $container->save();
+            return response()->json($suggester_iso);
         } catch (\Exception $e) {
             return $e->getMessage();
         }
