@@ -53,6 +53,9 @@ class OcrController extends Controller
             $scanned = ($ocr->run());
             $scanned = preg_replace("/[^A-Z0-9 ]+/i", "", $scanned);
             $scanned = preg_replace("/\s+/", "", $scanned); // cut all whitespace
+
+            $container->output = $scanned;
+            
             print("Tesseract output: " . $scanned . "\n");
             if (preg_match($regex_con_num, $scanned, $match)) {
                 $con_num = $match[0];
@@ -102,6 +105,7 @@ class OcrController extends Controller
                     }
                 }
             }
+
             $container->save();
             return response()->json($suggester_iso);
         } catch (\Exception $e) {
@@ -158,8 +162,6 @@ class OcrController extends Controller
         // $suggester_iso = MasterIso::where('code', 'LIKE', "%" .$str[1].$str[2]. "%")->get();
         // $suggester_iso = MasterIso::where('code', 'LIKE', "%" .$str[2].$str[3])->get();
         // $suggester_iso = MasterIso::where('code', 'LIKE', $str[0]. "%" .$str[3])->get();
-
-        $arr = [];
 
         $suggester_iso1 = MasterIso::where('code', 'LIKE', $str[0] . $str[1] . "%" . $str[3])->get();
 
