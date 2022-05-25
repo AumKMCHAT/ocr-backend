@@ -55,7 +55,7 @@ class OcrController extends Controller
             $scanned = preg_replace("/\s+/", "", $scanned); // cut all whitespace
 
             $container->output = $scanned;
-            
+
             print("Tesseract output: " . $scanned . "\n");
             if (preg_match($regex_con_num, $scanned, $match)) {
                 $con_num = $match[0];
@@ -99,7 +99,8 @@ class OcrController extends Controller
                     //if begining 2 str start with number >> substr
                     $str_4 = substr($scanned, $i, 4);
                     print("\nsubstr: " . $str_4);
-                    if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
+                    $regex_iso = "/[BMPL][0-9]|[0-9]{2}[A-Z0-9][0-9]|[PESIRT]/";
+                    if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1] && $str_4[2] == "/A-Z0-9/" && (is_numeric($str_4[3]) || $str_4[3] == "/PESIRT/"))) {
                         $arr = $this->compareMasterIso($str_4);
                         array_push($suggester_iso, $arr);
                     }
@@ -172,8 +173,10 @@ class OcrController extends Controller
         $suggester_iso4 = MasterIso::where('code', 'LIKE', $str[0] . $str[1] . $str[2] . "%")->get();
 
         $merge = array_merge($suggester_iso1->toArray(), $suggester_iso2->toArray(), $suggester_iso3->toArray(), $suggester_iso4->toArray());
+        if (count($merge) > 0) {
+            return $merge;
+        }
         
-        return $merge;
     }
 
     public function test()
