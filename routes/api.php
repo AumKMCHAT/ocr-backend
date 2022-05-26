@@ -21,4 +21,4 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::apiResource('/ocr', OcrController::class);
 
-Route::get('/test', [OcrController::class, 'test']);
+Route::post('/googleAPI', [OcrController::class, 'googleAPI']);

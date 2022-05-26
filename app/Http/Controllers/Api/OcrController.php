@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Eastwest\Json\Facades\Json;
 use Illuminate\Http\File;
+use Google\Cloud\Vision\V1\Feature\Type;
+use Google\Cloud\Vision\V1\ImageAnnotatorClient;
+use Google\Cloud\Vision\V1\Likelihood;
+use Google\Cloud\Vision\VisionClient;
 
 use function PHPUnit\Framework\isType;
 
@@ -42,7 +46,7 @@ class OcrController extends Controller
         $container = new Container();
         $container->path = $path;
 
-        $regex_iso = "/[BMPL][0-9]|[0-9]{2}[A-Z0-9][0-9]|[PESIRT]/";
+        $regex_iso = "/([BMPL][0-9]|[0-9]{2})[A-Z0-9]([0-9]|[PESIRT])/";
         $regex_con_num = "/[A-Z]{4}[0-9]{7}/";
 
         $suggester_iso = array();
@@ -52,7 +56,7 @@ class OcrController extends Controller
             $ocr->image($file);
             $scanned = ($ocr->run());
             $container->output = $scanned;
-            $scanned = preg_replace("/[^A-Z0-9 ]+/i", "", $scanned);
+            $scanned = preg_replace("/[^A-Z0-9 ]+/i", "", $scanned); //contain only A-Z 0-9
             $scanned = preg_replace("/\s+/", "", $scanned); // cut all whitespace
 
             print("Tesseract output: " . $scanned . "\n");
@@ -86,7 +90,7 @@ class OcrController extends Controller
                         if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
                             $arr = $this->compareMasterIso($str_4);
                             if (!is_null($arr)) {
-                               array_push($suggester_iso, ...$arr);
+                                array_push($suggester_iso, ...$arr);
                             }
                         }
                     }
@@ -103,7 +107,7 @@ class OcrController extends Controller
                     if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
                         $arr = $this->compareMasterIso($str_4);
                         if (!is_null($arr)) {
-                         array_push($suggester_iso, ...$arr);
+                            array_push($suggester_iso, ...$arr);
                         }
                     }
                 }
@@ -175,14 +179,44 @@ class OcrController extends Controller
         }
     }
 
-    public function test()
+    public function googleAPI(Request $request)
     {
-        $response = Http::get('https://datahub.io/core/iso-container-codes/r/iso-container-codes.json');
-        $master_iso = json_decode($response);
-        
-        // foreach (json_decode($response) as $master_iso) {
-        //     print_r("iso code: " . $master_iso->code . "\n"); //master_iso
-        // } //loop put api to database
-        dd($master_iso);
+
+        $file = $request->file('image');
+        $vision = new VisionClient(['keyFile' => json_decode(file_get_contents("C:\laragon\www\ocr-backend\service_account.json"), true)]);
+        $img = fopen($file, 'r');
+        $gg = $vision->image($img, ['TEXT_DETECTION']);
+        $result = $vision->annotate($gg);
+
+        // dd($result->info()['description']);
+
+        $scanned = $result->info()['textAnnotations'][0]['description'];
+
+        try {
+            $regex_iso = "/([BMPL][0-9]|[0-9]{2})[A-Z0-9]([0-9]|[PESIRT])/";
+            $regex_con_num = "/[A-Z]{4}[0-9]{7}/";
+
+            $scanned = preg_replace("/ /", "", $scanned); // cut all whitespace
+
+            $arr = [];
+
+            if (preg_match($regex_con_num, $scanned, $match)) {
+                $con_num = $match[0];
+                $scanned = str_replace($con_num, "", $scanned); //cut container number
+                array_push($arr, $con_num);
+            }
+
+            if (preg_match($regex_iso, $scanned, $match)) {
+                $iso = $match[0];
+                $master_iso = MasterIso::where('code', '=', $iso)->get();
+                if (count($master_iso) == 1) { //real iso
+                    array_push($arr, $iso);
+                }
+            }
+
+            return $arr;
+        } catch (\Exception $e) {
+            echo $e->getMessage();
+        }
     }
 }
