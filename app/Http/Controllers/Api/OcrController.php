@@ -51,10 +51,9 @@ class OcrController extends Controller
             $ocr = new TesseractOCR();
             $ocr->image($file);
             $scanned = ($ocr->run());
+            $container->output = $scanned;
             $scanned = preg_replace("/[^A-Z0-9 ]+/i", "", $scanned);
             $scanned = preg_replace("/\s+/", "", $scanned); // cut all whitespace
-
-            $container->output = $scanned;
 
             print("Tesseract output: " . $scanned . "\n");
             if (preg_match($regex_con_num, $scanned, $match)) {
