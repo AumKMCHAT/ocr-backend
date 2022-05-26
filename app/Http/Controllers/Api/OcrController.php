@@ -87,7 +87,8 @@ class OcrController extends Controller
                         if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
                             $arr = $this->compareMasterIso($str_4);
                             if (!is_null($arr)) {
-                                array_push($suggester_iso, $arr);
+                               array_push($suggester_iso, ...$arr);
+
                             }
                         }
                     }
@@ -104,13 +105,11 @@ class OcrController extends Controller
                     if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1] && $str_4[2] == "/A-Z0-9/" && (is_numeric($str_4[3]) || $str_4[3] == "/PESIRT/"))) {
                         $arr = $this->compareMasterIso($str_4);
                         if (!is_null($arr)) {
-                            array_push($suggester_iso, $arr);
+                         array_push($suggester_iso, $arr);
                         }
                     }
                 }
             }
-
-            dd($suggester_iso);
 
             $container->save();
             return response()->json($suggester_iso);
@@ -157,12 +156,6 @@ class OcrController extends Controller
     private function compareMasterIso($str)
     {
         print("\ncompare " . $str);
-        // $isos = MasterIso::get();
-
-        // foreach ($isos as $iso) {
-        //     print($iso->id . " " . $iso->code . "\n");
-        // }
-        // return $isos;
 
         // $suggester_iso = MasterIso::where('code', 'LIKE', $str[0].$str[1]. "%")->get();
         // $suggester_iso = MasterIso::where('code', 'LIKE', "%" .$str[1].$str[2]. "%")->get();
@@ -176,7 +169,7 @@ class OcrController extends Controller
         $suggester_iso3 = MasterIso::where('code', 'LIKE', $str[0] . "%" . $str[2] . $str[3])->pluck('code');
 
         $suggester_iso4 = MasterIso::where('code', 'LIKE', $str[0] . $str[1] . $str[2] . "%")->pluck('code');
-
+        // dd($suggester_iso1, $suggester_iso2, $suggester_iso3, $suggester_iso4);
         $merge = array_merge($suggester_iso1->toArray(), $suggester_iso2->toArray(), $suggester_iso3->toArray(), $suggester_iso4->toArray());
 
         if (count($merge) > 0) {
@@ -186,6 +179,12 @@ class OcrController extends Controller
 
     public function test()
     {
-        $this->compareMasterIso("L2G4");
+        $response = Http::get('https://datahub.io/core/iso-container-codes/r/iso-container-codes.json');
+        $master_iso = json_decode($response);
+        
+        // foreach (json_decode($response) as $master_iso) {
+        //     print_r("iso code: " . $master_iso->code . "\n"); //master_iso
+        // } //loop put api to database
+        dd($master_iso);
     }
 }
