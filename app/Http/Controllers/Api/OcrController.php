@@ -88,7 +88,6 @@ class OcrController extends Controller
                             $arr = $this->compareMasterIso($str_4);
                             if (!is_null($arr)) {
                                array_push($suggester_iso, ...$arr);
-
                             }
                         }
                     }
@@ -102,10 +101,10 @@ class OcrController extends Controller
                     //if begining 2 str start with number >> substr
                     $str_4 = substr($scanned, $i, 4);
                     print("\nsubstr: " . $str_4);
-                    if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1] && $str_4[2] == "/A-Z0-9/" && (is_numeric($str_4[3]) || $str_4[3] == "/PESIRT/"))) {
+                    if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
                         $arr = $this->compareMasterIso($str_4);
                         if (!is_null($arr)) {
-                         array_push($suggester_iso, $arr);
+                         array_push($suggester_iso, ...$arr);
                         }
                     }
                 }
