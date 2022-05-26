@@ -23,7 +23,7 @@ class OcrController extends Controller
      */
     public function index()
     {
-        $containers = Container::get();
+        $containers = Container::latest('id')->first();;
         return $containers;
     }
 
