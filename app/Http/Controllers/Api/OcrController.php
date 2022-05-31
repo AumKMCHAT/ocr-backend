@@ -46,20 +46,23 @@ class OcrController extends Controller
         $container = new Container();
         $container->path = $path;
 
-        $regex_iso = "/([BMPL][0-9]|[0-9]{2})[A-Z0-9]([0-9]|[PESIRT])/";
+        $regex_iso = "/([BMPL][0-9]|[0-9]{2})[A-Z]([0-9]|[PESIRT])/";
         $regex_con_num = "/[A-Z]{4}[0-9]{7}/";
 
         $suggester_iso = array();
 
         try {
-            $ocr = new TesseractOCR();
-            $ocr->image($file);
-            $scanned = ($ocr->run());
+            $vision = new VisionClient(['keyFile' => json_decode(file_get_contents("C:\laragon\www\ocr-backend\service_account.json"), true)]);
+            $img = fopen($file, 'r');
+            $gg = $vision->image($img, ['TEXT_DETECTION']);
+            $result = $vision->annotate($gg);
+            $scanned = $result->info()['textAnnotations'][0]['description'];
+            
             $container->output = $scanned;
-            $scanned = preg_replace("/[^A-Z0-9 ]+/i", "", $scanned); //contain only A-Z 0-9
+            // $scanned = preg_replace("/[^A-Z0-9 ]+/i", "", $scanned); //contain only A-Z 0-9
             $scanned = preg_replace("/\s+/", "", $scanned); // cut all whitespace
 
-            print("Tesseract output: " . $scanned . "\n");
+            print("Google output: " . $scanned . "\n");
             if (preg_match($regex_con_num, $scanned, $match)) {
                 $con_num = $match[0];
                 $scanned = str_replace($con_num, "", $scanned); //cut container number
@@ -72,6 +75,7 @@ class OcrController extends Controller
                 print("Container number: " . $con_num);
                 $container->container_number = $con_num;
             }
+            
             if (preg_match($regex_iso, $scanned, $match)) {
                 $iso = $match[0];
                 $master_iso = MasterIso::where('code', '=', $iso)->get();
@@ -204,6 +208,11 @@ class OcrController extends Controller
                 $con_num = $match[0];
                 $scanned = str_replace($con_num, "", $scanned); //cut container number
                 array_push($arr, $con_num);
+            } else {
+                // not found container number
+                $con_num = "Not Found";
+                print("Container number: " . $con_num);
+                array_push($arr, $con_num);
             }
 
             if (preg_match($regex_iso, $scanned, $match)) {
@@ -211,6 +220,38 @@ class OcrController extends Controller
                 $master_iso = MasterIso::where('code', '=', $iso)->get();
                 if (count($master_iso) == 1) { //real iso
                     array_push($arr, $iso);
+                } else {
+                    $iso = "Not Found";
+                    array_push($arr, $iso);
+                    print("\niso: " . $iso);
+                    //not found iso
+                    for ($i = 0; $i < strlen($scanned) - 3; $i++) {
+                        //if begining 2 str start with number >> substr
+                        $str_4 = substr($scanned, $i, 4);
+                        print("\nsubstr: " . $str_4);
+                        if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
+                            $arr = $this->compareMasterIso($str_4);
+                            if (!is_null($arr)) {
+                                array_push($suggester_iso, ...$arr);
+                            }
+                        }
+                    }
+                }
+            } else {
+                $iso = "Not Found";
+                array_push($arr, $iso);
+                print("\niso: " . $iso);
+                //not found iso
+                for ($i = 0; $i < strlen($scanned) - 3; $i++) {
+                    //if begining 2 str start with number >> substr
+                    $str_4 = substr($scanned, $i, 4);
+                    print("\nsubstr: " . $str_4);
+                    if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
+                        $arr = $this->compareMasterIso($str_4);
+                        if (!is_null($arr)) {
+                            array_push($suggester_iso, ...$arr);
+                        }
+                    }
                 }
             }
 
