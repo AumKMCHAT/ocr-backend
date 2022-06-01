@@ -56,36 +56,35 @@ class OcrController extends Controller
             $img = fopen($file, 'r');
             $gg = $vision->image($img, ['TEXT_DETECTION']);
             $result = $vision->annotate($gg);
+
             $scanned = $result->info()['textAnnotations'][0]['description'];
-            
+
             $container->output = $scanned;
             // $scanned = preg_replace("/[^A-Z0-9 ]+/i", "", $scanned); //contain only A-Z 0-9
             $scanned = preg_replace("/\s+/", "", $scanned); // cut all whitespace
 
-            print("Google output: " . $scanned . "\n");
             if (preg_match($regex_con_num, $scanned, $match)) {
                 $con_num = $match[0];
                 $scanned = str_replace($con_num, "", $scanned); //cut container number
-                print("scaned after found container: " . $scanned);
                 $container->container_number = $con_num;
-                print("\ncontainer number: " . $con_num);
+                // print("container number: " . $con_num);
             } else {
                 // not found container number
                 $con_num = "Not Found";
-                print("Container number: " . $con_num);
+                // print("Container number: " . $con_num);
                 $container->container_number = $con_num;
             }
-            
+
             if (preg_match($regex_iso, $scanned, $match)) {
                 $iso = $match[0];
                 $master_iso = MasterIso::where('code', '=', $iso)->get();
                 if (count($master_iso) == 1) { //real iso
-                    print("\niso: " . $iso);
+                    // print("\niso: " . $iso);
                     $container->iso = $iso;
                 } else {
                     $iso = "Not Found";
                     $container->iso = $iso;
-                    print("\niso: " . $iso);
+                    // print("\niso: " . $iso);
                     //not found iso
                     for ($i = 0; $i < strlen($scanned) - 3; $i++) {
                         //if begining 2 str start with number >> substr
