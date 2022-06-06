@@ -27,7 +27,7 @@ class OcrController extends Controller
      */
     public function index()
     {
-        $containers = Container::latest('id');
+        $containers = Container::latest('id')->get();
         return $containers;
     }
 
