@@ -27,7 +27,7 @@ class OcrController extends Controller
      */
     public function index()
     {
-        $containers = Container::latest('id')->first();;
+        $containers = Container::latest('id');
         return $containers;
     }
 
@@ -40,87 +40,15 @@ class OcrController extends Controller
     public function store(Request $request)
     {
 
-        $file = $request->file('image');
-        $path = Storage::putFile('images', new File($file)); // path to call image
+        $tesseract_output = $this->tesseract($request);
+        $google_output = $this->googleAPI($request);
 
-        $container = new Container();
-        $container->path = $path;
-
-        $regex_iso = "/([BMPL][0-9]|[0-9]{2})[A-Z]([0-9]|[PESIRT])/";
-        $regex_con_num = "/[A-Z]{4}[0-9]{7}/";
+        $this->match($tesseract_output, $request, 'tesseract');
+        $this->match($google_output, $request, 'google');
 
         $suggester_iso = array();
 
-        try {
-            $vision = new VisionClient(['keyFile' => json_decode(file_get_contents("C:\laragon\www\ocr-backend\service_account.json"), true)]);
-            $img = fopen($file, 'r');
-            $gg = $vision->image($img, ['TEXT_DETECTION']);
-            $result = $vision->annotate($gg);
-
-            $scanned = $result->info()['textAnnotations'][0]['description'];
-
-            $container->output = $scanned;
-            // $scanned = preg_replace("/[^A-Z0-9 ]+/i", "", $scanned); //contain only A-Z 0-9
-            $scanned = preg_replace("/\s+/", "", $scanned); // cut all whitespace
-
-            if (preg_match($regex_con_num, $scanned, $match)) {
-                $con_num = $match[0];
-                $scanned = str_replace($con_num, "", $scanned); //cut container number
-                $container->container_number = $con_num;
-                // print("container number: " . $con_num);
-            } else {
-                // not found container number
-                $con_num = "Not Found";
-                // print("Container number: " . $con_num);
-                $container->container_number = $con_num;
-            }
-
-            if (preg_match($regex_iso, $scanned, $match)) {
-                $iso = $match[0];
-                $master_iso = MasterIso::where('code', '=', $iso)->get();
-                if (count($master_iso) == 1) { //real iso
-                    // print("\niso: " . $iso);
-                    $container->iso = $iso;
-                } else {
-                    $iso = "Not Found";
-                    $container->iso = $iso;
-                    // print("\niso: " . $iso);
-                    //not found iso
-                    for ($i = 0; $i < strlen($scanned) - 3; $i++) {
-                        //if begining 2 str start with number >> substr
-                        $str_4 = substr($scanned, $i, 4);
-                        print("\nsubstr: " . $str_4);
-                        if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
-                            $arr = $this->compareMasterIso($str_4);
-                            if (!is_null($arr)) {
-                                array_push($suggester_iso, ...$arr);
-                            }
-                        }
-                    }
-                }
-            } else {
-                $iso = "Not Found";
-                $container->iso = $iso;
-                print("\niso: " . $iso);
-                //not found iso
-                for ($i = 0; $i < strlen($scanned) - 3; $i++) {
-                    //if begining 2 str start with number >> substr
-                    $str_4 = substr($scanned, $i, 4);
-                    print("\nsubstr: " . $str_4);
-                    if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
-                        $arr = $this->compareMasterIso($str_4);
-                        if (!is_null($arr)) {
-                            array_push($suggester_iso, ...$arr);
-                        }
-                    }
-                }
-            }
-
-            $container->save();
-            return response()->json($suggester_iso);
-        } catch (\Exception $e) {
-            return $e->getMessage();
-        }
+        return response()->json($suggester_iso);
     }
 
     /**
@@ -160,8 +88,6 @@ class OcrController extends Controller
 
     private function compareMasterIso($str)
     {
-        print("\ncompare " . $str);
-
         // $suggester_iso = MasterIso::where('code', 'LIKE', $str[0].$str[1]. "%")->get();
         // $suggester_iso = MasterIso::where('code', 'LIKE', "%" .$str[1].$str[2]. "%")->get();
         // $suggester_iso = MasterIso::where('code', 'LIKE', "%" .$str[2].$str[3])->get();
@@ -186,66 +112,104 @@ class OcrController extends Controller
     {
 
         $file = $request->file('image');
-        $vision = new VisionClient(['keyFile' => json_decode(file_get_contents("C:\laragon\www\ocr-backend\service_account.json"), true)]);
-        $img = fopen($file, 'r');
-        $gg = $vision->image($img, ['TEXT_DETECTION']);
-        $result = $vision->annotate($gg);
-
-        // dd($result->info()['description']);
-
-        $scanned = $result->info()['textAnnotations'][0]['description'];
 
         try {
-            $regex_iso = "/([BMPL][0-9]|[0-9]{2})[A-Z0-9]([0-9]|[PESIRT])/";
-            $regex_con_num = "/[A-Z]{4}[0-9]{7}/";
 
-            $scanned = preg_replace("/ /", "", $scanned); // cut all whitespace
-
-            $arr = [];
-
-            if (preg_match($regex_con_num, $scanned, $match)) {
-                $con_num = $match[0];
-                $scanned = str_replace($con_num, "", $scanned); //cut container number
-                array_push($arr, $con_num);
-            } else {
-                // not found container number
-                $con_num = "Not Found";
-                print("Container number: " . $con_num);
-                array_push($arr, $con_num);
+            $vision = new VisionClient(['keyFile' => json_decode(file_get_contents("C:\laragon\www\ocr-backend\service_account.json"), true)]);
+            $img = fopen($file, 'r');
+            $gg = $vision->image($img, ['TEXT_DETECTION']);
+            $result = $vision->annotate($gg);
+            if ($result->info()) {
+                return $result->info()['fullTextAnnotation']['text'];
             }
+        } catch (\Exception $e) {
+            return $e->getMessage();
+        }
+    }
 
-            if (preg_match($regex_iso, $scanned, $match)) {
-                $iso = $match[0];
-                $master_iso = MasterIso::where('code', '=', $iso)->get();
-                if (count($master_iso) == 1) { //real iso
-                    array_push($arr, $iso);
-                } else {
-                    $iso = "Not Found";
-                    array_push($arr, $iso);
-                    print("\niso: " . $iso);
-                    //not found iso
-                    for ($i = 0; $i < strlen($scanned) - 3; $i++) {
-                        //if begining 2 str start with number >> substr
-                        $str_4 = substr($scanned, $i, 4);
-                        print("\nsubstr: " . $str_4);
-                        if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
-                            $arr = $this->compareMasterIso($str_4);
-                            if (!is_null($arr)) {
-                                array_push($suggester_iso, ...$arr);
-                            }
-                        }
-                    }
-                }
+    public function tesseract(Request $request)
+    {
+        $file = $request->file('image');
+
+        try {
+            $ocr = new TesseractOCR();
+            $ocr->image($file);
+            $scanned = ($ocr->run());
+
+            return $scanned;
+        } catch (\Exception $e) {
+            return $e->getMessage();
+        }
+    }
+
+    public function space(Request $request)
+    {
+        $file = $request->file('image');
+
+        $client = new \GuzzleHttp\Client();
+
+        //เด็กมีปัญหา cURL error 60: SSL certificate problem: unable to get local issuer certificate
+        try {
+            $resp = Http::withHeaders(['apiKey' => 'K86647851888957'])->attach('attachment', file_get_contents($file))->post('https://api.ocr.space/parse/image');
+
+            // $r = $client->request('POST', 'https://api.ocr.space/parse/image', [
+            //     'headers' => ['apiKey' => 'K86647851888957'],
+            //     'multipart' => [
+            //         [
+            //             'name' => 'file',
+            //             'contents' => $file
+            //         ]
+            //     ]
+            // ], ['file' => $file]);
+            // echo $r->getStatusCode();
+            // $response =  json_decode($r->getBody(), true);
+
+            return $resp;
+        } catch (\Exception $e) {
+            return $e->getMessage();
+        }
+    }
+
+    public function match(String $input, Request $request, String $type)
+    {
+        $suggester_iso = array();
+
+        $file = $request->file('image');
+
+        $regex_iso = "/([BML][0-9]|[0-9]{2}|[0-9]C)[A-Z][0-9]/";
+        $regex_con_num = "/[A-Z]{3}[UJZ][0-9]{7}/";
+
+        $path = Storage::putFile('images', new File($file)); // path to call image
+
+        $container = new Container();
+        $container->type = $type;
+        $container->output = $input;
+        $container->path = $path;
+
+        // $input = preg_replace("/[^A-Z0-9 ]+/i", "", $input); //contain only A-Z 0-9
+        $input = preg_replace("/ /", "", $input); // cut space bar
+
+        if (preg_match($regex_con_num, $input, $match)) {
+            $con_num = $match[0];
+            $container->container_number = $con_num;
+            $input = str_replace($con_num, "", $input); //cut container number
+        } else {
+            $container->container_number = "NotFound";
+        }
+
+        if (preg_match($regex_iso, $input, $match)) {
+            $iso = $match[0];
+            $master_iso = MasterIso::where('code', '=', $iso)->get();
+
+            if (count($master_iso) == 1) { //real iso
+                $container->iso = $iso;
             } else {
-                $iso = "Not Found";
-                array_push($arr, $iso);
-                print("\niso: " . $iso);
-                //not found iso
-                for ($i = 0; $i < strlen($scanned) - 3; $i++) {
+                $container->iso = "NotFound";
+                for ($i = 0; $i < strlen($input) - 3; $i++) {
                     //if begining 2 str start with number >> substr
-                    $str_4 = substr($scanned, $i, 4);
-                    print("\nsubstr: " . $str_4);
-                    if ((is_numeric($str_4[0]) || $str_4[0] == "/[BMPL]/") && is_numeric($str_4[1])) {
+                    $str_4 = substr($input, $i, 4);
+
+                    if ((is_numeric($str_4[0]) || $str_4[0] == "/[BML]/") && is_numeric($str_4[1])) {
                         $arr = $this->compareMasterIso($str_4);
                         if (!is_null($arr)) {
                             array_push($suggester_iso, ...$arr);
@@ -253,10 +217,20 @@ class OcrController extends Controller
                     }
                 }
             }
-
-            return $arr;
-        } catch (\Exception $e) {
-            echo $e->getMessage();
+        } else {
+            $container->iso = "NotFound";
+            for ($i = 0; $i < strlen($input) - 3; $i++) {
+                //if begining 2 str start with number >> substr
+                $str_4 = substr($input, $i, 4);
+                if ((is_numeric($str_4[0]) || $str_4[0] == "/[BML]/") && is_numeric($str_4[1])) {
+                    $arr = $this->compareMasterIso($str_4);
+                    if (!is_null($arr)) {
+                        array_push($suggester_iso, ...$arr);
+                    }
+                }
+            }
         }
+        $container->save();
+        return response()->json($suggester_iso);
     }
 }

@@ -15,10 +15,11 @@ return new class extends Migration
     {
         Schema::create('containers', function (Blueprint $table) {
             $table->id('id');
+            $table->enum('type', ['google', 'tesseract']);
             $table->text('output');
             $table->string('path');
-            $table->string('container_number');
-            $table->string('iso');
+            $table->string('container_number')->nullable();
+            $table->string('iso')->nullable();
             $table->timestamps();
         });
     }
