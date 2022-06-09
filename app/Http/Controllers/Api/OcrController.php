@@ -16,8 +16,6 @@ use Google\Cloud\Vision\V1\ImageAnnotatorClient;
 use Google\Cloud\Vision\V1\Likelihood;
 use Google\Cloud\Vision\VisionClient;
 
-use function PHPUnit\Framework\isType;
-
 class OcrController extends Controller
 {
     /**
@@ -43,12 +41,12 @@ class OcrController extends Controller
         $tesseract_output = $this->tesseract($request);
         $google_output = $this->googleAPI($request);
 
-        $this->match($tesseract_output, $request, 'tesseract');
-        $this->match($google_output, $request, 'google');
+        $suggest_arr_tes = $this->match($tesseract_output, $request, 'tesseract');
+        $suggest_arr_gg = $this->match($google_output, $request, 'google');
 
-        $suggester_iso = array();
+        $suggester_iso = array($suggest_arr_tes, $suggest_arr_gg);
 
-        return response()->json($suggester_iso);
+        return $suggester_iso;
     }
 
     /**
@@ -121,6 +119,8 @@ class OcrController extends Controller
             $result = $vision->annotate($gg);
             if ($result->info()) {
                 return $result->info()['fullTextAnnotation']['text'];
+            } else {
+                return "";
             }
         } catch (\Exception $e) {
             return $e->getMessage();
@@ -150,21 +150,21 @@ class OcrController extends Controller
 
         //เด็กมีปัญหา cURL error 60: SSL certificate problem: unable to get local issuer certificate
         try {
-            $resp = Http::withHeaders(['apiKey' => 'K86647851888957'])->attach('attachment', file_get_contents($file))->post('https://api.ocr.space/parse/image');
+            // $resp = Http::withHeaders(['apiKey' => 'K86647851888957'])->attach('attachment', file_get_contents($file))->post('https://api.ocr.space/parse/image');
 
-            // $r = $client->request('POST', 'https://api.ocr.space/parse/image', [
-            //     'headers' => ['apiKey' => 'K86647851888957'],
-            //     'multipart' => [
-            //         [
-            //             'name' => 'file',
-            //             'contents' => $file
-            //         ]
-            //     ]
-            // ], ['file' => $file]);
-            // echo $r->getStatusCode();
-            // $response =  json_decode($r->getBody(), true);
+            $r = $client->request('POST', 'https://api.ocr.space/parse/image', [
+                'headers' => ['apiKey' => 'K86647851888957'],
+                'multipart' => [
+                    [
+                        'name' => 'file',
+                        'contents' => "QcIigF9xkGMKPihSnpF4U7aId00ZcnYpNXe5xpM.jpg"
+                    ]
+                ]
+            ], ['file' => "QcIigF9xkGMKPihSnpF4U7aId00ZcnYpNXe5xpM.jpg"]);
+            echo $r->getStatusCode();
+            $response =  json_decode($r->getBody(), true);
 
-            return $resp;
+            return $response;
         } catch (\Exception $e) {
             return $e->getMessage();
         }
@@ -231,6 +231,6 @@ class OcrController extends Controller
             }
         }
         $container->save();
-        return response()->json($suggester_iso);
+        return $suggester_iso;
     }
 }
